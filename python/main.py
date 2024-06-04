@@ -6,32 +6,73 @@ from kf import KF
 plt.ion()
 plt.figure()
 
-kf = KF(initial_x=0.0, initial_v=0.5, acc_variance=0.1)
+real_x = 0.0
+meas_variance = 0.1 ** 2 # Measurement variance a.ka. the noise in our measurements
+real_v = 0.9
+
+kf = KF(initial_x=0.0, initial_v=1.0, acc_variance=0.1)
 
 DT = 0.1
-NUM_STEPS = 100
+NUM_STEPS = 1000
+MAES_EVERY_STEPS = 20
+
 
 mus = []
 covs = []
+real_xs = []
+real_vs = []
 
-for i in range(NUM_STEPS):
+for step in range(NUM_STEPS):
+    if step > 500:
+        real_v *= 0.9
+        
     covs.append(kf.cov)
     mus.append(kf.mean)
 
-    kf.predict(DT)
+    real_x = real_x  +  DT * real_v # This is the perfect state
+
+    kf.predict(dt=DT)
+
+    if step != 0 and step % MAES_EVERY_STEPS == 0:
+        kf.update(meas_value=real_x + np.random.randn() * np.sqrt(meas_variance),
+                  meas_variance = meas_variance) # This is the noisy measurement. Use the nosiy measurement to refine the state
+    real_xs.append(real_x)
+    real_vs.append(real_v)
+
+
+# plt.subplot(2, 1, 1)
+# plt.title("Position")
+# plt.plot([mu[0] for mu in mus], 'r')
+# plt.plot(real_xs, 'g')
+# plt.plot([mu[0] - 2*np.sqrt(cov[0, 0]) for mu, cov in zip(mus, covs)], 'r--')
+# plt.plot([mu[0] + 2*np.sqrt(cov[0, 0]) for mu, cov in zip(mus, covs)], 'r--')
+
+# print("\n")
+# plt.subplot(2, 1, 2)
+# plt.title("Velocity")
+# plt.plot([mu[1] for mu in mus], 'r')
+# plt.plot(real_xs, 'g')
+# plt.plot([mu[1] - 2*np.sqrt(cov[1, 1]) for mu, cov in zip(mus, covs)], 'r--')
+# plt.plot([mu[1] + 2*np.sqrt(cov[1, 1]) for mu, cov in zip(mus, covs)], 'r--')
+
+# plt.show()
+# plt.ginput(1)
+
+
 
 plt.subplot(2, 1, 1)
-plt.title("Position")
+plt.title('Position')
 plt.plot([mu[0] for mu in mus], 'r')
-plt.plot([mu[0] - 2*np.sqrt(cov[0,0]) for mu, cov in zip(mus, covs)], 'r--')
-plt.plot([mu[0] + 2*np.sqrt(cov[0,0]) for mu, cov in zip(mus, covs)], 'r--')
+plt.plot(real_xs, 'b')
+plt.plot([mu[0] - 2*np.sqrt(cov[0,0]) for mu, cov in zip(mus,covs)], 'r--')
+plt.plot([mu[0] + 2*np.sqrt(cov[0,0]) for mu, cov in zip(mus,covs)], 'r--')
 
 plt.subplot(2, 1, 2)
-plt.title("Velocity")
+plt.title('Velocity')
+plt.plot(real_vs, 'b')
 plt.plot([mu[1] for mu in mus], 'r')
-plt.plot([mu[1] - 2*np.sqrt(cov[1,1]) for mu, cov in zip(mus, covs)], 'r--')
-plt.plot([mu[1] + 2*np.sqrt(cov[1,1]) for mu, cov in zip(mus, covs)], 'r--')
+plt.plot([mu[1] - 2*np.sqrt(cov[1,1]) for mu, cov in zip(mus,covs)], 'r--')
+plt.plot([mu[1] + 2*np.sqrt(cov[1,1]) for mu, cov in zip(mus,covs)], 'r--')
 
 plt.show()
-plt.ginput(1, 0)
-
+plt.ginput(1)

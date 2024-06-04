@@ -4,25 +4,34 @@ import unittest
 
 # intial_v : location
 # intial_x : speed estimate
+# acc_variance : variance of the acceleration
+
+ix = 0
+iv = 1
+NUMVARS = ix + 1
+
 
 NUMVARS = 2
 class KF:
-    def __init__(self, initial_v: float, 
-                 initial_x: float,
+    def __init__(self, initial_x: float, 
+                 initial_v: float,
                  acc_variance: float): # Add type annotations to make clear what is expected
-        #Mean of the state GRV
-        self._x = np.array([initial_x, initial_v])
-        self.acc_variance = acc_variance
-
-        #Covariance of the state GRV
-        self._P = np.eye(2)
+        
         #Mean of the state GRV
 
-        self.x = np.array([initial_x, initial_v])
+        self._x = np.zeros(NUMVARS)
+
+        self._x[ix] = initial_x
+        self._x[iv] = initial_v
+        
+        self._acc_variance = acc_variance
 
         #Covariance of the state GRV
+        #Mean of the state GRV
 
-        self.P = np.eye(2)
+        #Covariance of the state GRV
+        self._P = np.eye(NUMVARS)
+
     def predict(self, dt: float) -> None:
 
 
@@ -31,34 +40,40 @@ class KF:
         # P = F P F^T + Q Qt a 
                 
         #State transition matrix
-        F = np.array([[1, dt],
-                      [0, 1]])
+
+        F = np.eye(NUMVARS)
+        F[ix, iv] = dt
+
+        # F = np.array([[1, dt],
+        #               [0, 1]])
         new_x = F.dot(self._x)
         
         #Process noise covariance
-         
-        Q = np.array([0.5 * dt**2, dt]).reshape((2, 1))
+        Q = np.zeros((2,1))
+        Q[ix] = 0.5 * dt**2
+        Q[iv] = dt
+        # Q = np.array([0.5 * dt**2, dt]).reshape((2, 1))
         #Predict the state
 
         #Predict the state covariance
 
-        new_P = F.dot(self._P).dot(F.T) + Q.dot(Q.T) * self.acc_variance
+        new_P = F.dot(self._P).dot(F.T) + Q.dot(Q.T) * self._acc_variance
 
-        self._x = new_x
         self._P = new_P
+        self._x = new_x
         
-    def update(self,maes_value:float, meas_variance:float):
-        # y = z - H x
-        # S = H P H^T + R
-        # K = P H^T S^-1
-        # x = x + K y
-        # P = (I - K H) P
+    def update(self, meas_value:float, meas_variance:float):
+        # y = z - H x y is the innovation
+        # S = H P H^T + R S is the innovation covariance
+        # K = P H^T S^-1 K is the Kalman gain
+        # x = x + K y x is the new state estimate
+        # P = (I - K H) P P is the new state covariance
 
         #Measurement matrix
 
         H = np.zeros((1, 2))
 
-        z = np.array([maes_value])
+        z = np.array([meas_value])
         R = np.array([meas_variance])
 
         y = z - H.dot(self._x)
@@ -73,8 +88,6 @@ class KF:
         self._P = new_P
 
 
-
-
     @property
     def cov(self) -> np.array:
         return self._P
@@ -85,11 +98,11 @@ class KF:
      
     @property
     def pos(self) -> float:
-        return self._x[0]
+        return self._x[ix]
     
     @property
     def vel(self) -> float:
-        return self._x[1]
+        return self._x[iv]
     
 
 
